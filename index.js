@@ -4,7 +4,7 @@ const R = require('ramda');
 const get = property => value => value[property];
 const getIds = obj => obj.map(get('id'));
 const map = fn => values => values.map(fn)
-
+const log = (value) => console.log(value)
 
 const fetchCall = async url => {
   const {data} = await axios.get(url);
@@ -283,4 +283,398 @@ const getNames = async() => {
 }
 
 
-getNames();
+// getNames();
+
+
+const isValidAr = [6,3,4,5,2];
+const isInvalidAr = [400,203,4,6,1,9];
+
+
+// const isFirstElementBiggest = arr =>
+// arr[0] === arr.sort((a,b) => b-a)[0]
+
+const big = (a,b) => b-a
+const isFirstElementBiggest = R.converge(R.equals, [
+  R.head,
+  elements => R.head(R.sort(big,elements))
+])
+
+
+console.log(isFirstElementBiggest(isValidAr))
+console.log(isFirstElementBiggest(isInvalidAr))
+
+
+//filter
+
+
+const filterArray = async () => {
+  //fetch Data
+  const a = await fetchCall('https://jsonplaceholder.typicode.com/albums');
+  // const getUserName = users => {
+  //  return users
+  //  .filter(user => user.id > 5)
+  //  .map(user => user.name)
+  // }
+
+
+  const getAlbum = R.compose(
+    R.map(album => album.title),
+    R.filter(R.where({
+      userId:R.gt(R.__,2),
+    }))
+  )
+
+  console.log(getAlbum(a))
+}
+
+// filterArray();
+
+
+
+
+const video = {
+  '720p':"funny-video-hd.mp4",
+  "480p":"funny-video-480p.mp4",
+  "isHD":true
+}
+
+const getPath = R.ifElse(
+    R.propEq('isHD',true),
+    R.prop('720p'),
+    R.prop('480p')
+  )
+
+console.log(getPath(video))
+
+
+
+
+const vidoes = [
+  {
+    '720p':"funny-video-hd.mp4",
+    "480p":"funny-video-480p.mp4",
+    "isHD":true
+  },
+  {
+    '720p':"funny-video-hd.mp4",
+    "480p":"funny-video-480p.mp4",
+    "isHD":false
+  },{
+    '720p':"funny-video-hd.mp4",
+    "480p":"funny-video-480p.mp4",
+    "isHD":false
+  }
+]
+
+
+const getVideoPaths = (videos) => {
+  return
+}
+
+
+// const getVideoFilePath = video => {
+//   const file =  video.isHD ? video['720p'] : video['480p'];
+//
+//   return `/api/vidoes/${file}`
+// }
+
+const Right = x => (
+  {
+    fold:(l,g) => g(x),
+    map:f => Right(f(x)),
+    log:() => `Right(${x})`
+  }
+)
+
+const Left = x => (
+  {
+    fold:(l,g) => l(x),
+    map:f => Left(f),
+    log:() => `Right(${x})`
+  }
+)
+
+const Nullable = fn => x => fn(x) ? Right(x) : Left(x);
+
+const isHD = value => value.isHD
+const VideoNullable = Nullable(isHD);
+
+
+VideoNullable(video)
+.fold(
+  () => console.log('nope'),
+  () => console.log(`${video["720p"]}`)
+)
+
+const getVideoFilePath = R.compose(
+  R.concat('/api/videos/'),
+  R.ifElse(
+    R.propEq('isHD',true),
+    R.prop('720p'),
+    R.prop('480p')
+  )
+)
+
+
+
+console.log(getVideoFilePath(video))
+
+
+const getMessage = isWorkingTime => {
+  const onlineMessage = 'we are online';
+  const offline = 'We are offline';
+  return isWorkingTime ? onlineMessage : offline;
+}
+
+
+const getCompleted = async () => {
+  const a  = await fetchCall('https://jsonplaceholder.typicode.com/todos');
+
+  const w = R.compose(
+    R.filter(x => x!== undefined),
+    R.map(R.ifElse(
+        R.propEq('completed',true),
+        R.prop('title'),
+        R.always(undefined)
+      ))
+  )
+  console.log(w(a))
+}
+
+
+// getCompleted()
+
+
+const truncate = R.when(
+  R.pipe(
+    R.prop('length'),
+    R.gt(R.__,10)
+  ),
+  R.pipe(
+    R.take(10),
+    R.concat(R.__,'...')
+  )
+)
+
+
+console.log(truncate('12345'))
+console.log(truncate('12345678910'))
+
+
+
+
+
+
+
+
+
+
+const fp = () => {
+  const Right = value => (
+    {
+       fold:(f,g) => g(value),
+       next:fn =>  Right(fn(value))
+    }
+  )
+
+  const Left = value => ({
+    fold:(f,g) => f(value),
+    next:fn =>  Left(value)
+  })
+
+  return {
+    compose: (...fns) => value => (
+     fns.reduceRight((acc,fn) => fn(acc),value)
+   ),
+    pipe:(...fns) => value => (
+     fns.reduce((acc,fn) => fn(acc),value)
+   ),
+   map:fn => value => value.map(fn),
+   filter: precicate => value => value.filter(precicate),
+   either:fn => value => fn(value) ? Right(value) : Left(value),
+   maybe: fn => value => fn(value) ? [fn(value)] : []
+  }
+}
+
+const S = fp();
+const strCondition =S.either(str => str.length > 10)('12345678910')
+
+strCondition
+.next(str => str.substring(0,10))
+.next(str => str.concat('...'))
+.fold(() => console.log('no'), str => console.log(str))
+
+const f = R.subtract(R.__,10);
+console.log(f(5))
+
+
+
+
+const curryify = (fn) => {
+  const arity = fn.length;
+  return function f1(...args){
+    if(args.length === arity){
+      return fn(...args);
+    }else{
+      return (...moreArgs) => {
+        const newArgs = [...args,...moreArgs];
+        return f1(...newArgs);
+      }
+    }
+  }
+}
+
+const multiply = (a,b,c) => a * b * c;
+const multiplyFP = curryify(multiply);
+
+console.log(multiplyFP(1)(3)(2))
+
+
+const add10 = R.add(10);
+const double = R.multiply(2);
+const indexPlusValue = (v,i) => v + i
+const adjustBySubtract =R.adjust(R.subtract(R.__,5))
+
+const ramdaResult = R.pipe(
+  R.map(add10),
+  R.map(double),
+  R.addIndex(R.map)(indexPlusValue),
+  adjustBySubtract(1)
+)([1,2,3,4]);
+
+console.log(ramdaResult)
+
+
+const equal5 = R.equals(5);
+
+const zx  = R.pipe(
+  R.all(R.gte(10,))
+)([5,5,5,5,5])
+
+const firstProp = R.gte(R.__,2);
+const secondProp = R.lte(R.__,10);
+const allPass = R.allPass([firstProp,secondProp])
+
+console.log(
+  R.pipe(
+    R.all(allPass)
+  )([5,5,5,5,5])
+)
+
+const FPmap = fn => value => value.map(fn);
+
+const k = x => R.always(x)
+const t = R.always('tttt')
+const id = x => R.identity(x)
+
+log(
+  k('yes')()
+)
+
+log(
+  t()
+)
+
+log(
+  id('2')
+)
+
+////
+log('wwwwwww===========')
+
+const westman = async() => {
+  const w = await fetchCall('https://jsonplaceholder.typicode.com/todos');
+  const t = await fetchCall('https://jsonplaceholder.typicode.com/posts');
+
+  return R.and(w.length === t.length,w.length === t.length)
+}
+
+// westman()
+// .then(s => console.log(s))
+
+
+
+log('==========')
+
+
+
+const condition1 = R.lte(R.__,10);
+const condition2 = R.gte(R.__,5);
+
+log(
+  R.pipe(
+    R.all(R.anyPass([condition1,condition2]))
+  )([9,9,9,9,9])
+)
+
+
+
+
+log(
+  R.pipe(
+    R.ap([R.multiply(5), R.add(2)])
+  )([1,2,3,4,5,6,7])
+)
+
+
+log(
+  R.pipe(
+    R.ap(R.concat, R.toUpper)
+  )('Ramda')
+)
+
+
+
+log(
+  R.pipe(
+    R.concat('Ramda'),
+    R.toUpper
+  )('Ramda')
+)
+
+const data = {
+  text:'hi',
+  reps:3
+}
+
+log(
+    R.ap(
+      R.pipe(
+        R.prop('text'),
+        R.repeat
+      ),
+      R.prop('reps')
+    )(data)
+)
+
+log('=====')
+log(
+  R.repeat(data.text)(data.reps)
+)
+log('=====')
+
+
+
+log(
+  R.ap(
+    R.concat,
+    R.toUpper
+  )('Ramda')
+)
+
+
+log(R.concat('Ramda')(R.toUpper('Ramda')))
+
+
+
+const add2 = x => x + 2
+
+
+////review
+const a3 =
+S.pipe(
+  S.map(add2)
+)([5,6,7,8])
+
+
+console.log(a3)
