@@ -264,7 +264,7 @@ const state = {
   count:0,
   name:'sung',
   address:{
-    street:'140',
+    street:1,
     state:'CA'
   }
 };
@@ -272,11 +272,230 @@ const state = {
 
 
 const stateLens = R.lensPath(['address','street']);
+const inc = R.over(stateLens,R.inc)
 
+
+// log(
+//   R.view(stateLens,state)
+// )
+
+log(
+ inc(state)
+)
 log(
   R.view(stateLens,state)
 )
 
+
+const products = [
+  {
+    name:'Jacket',
+    price:50,
+    category:'clothes',
+    count:20
+  },
+  {
+    name:'Boots',
+    price:120,
+    category:'clothes',
+    count:30
+  },
+  {
+    name:'Iphone',
+    price:600,
+    category:'electronics',
+    count:10
+  }
+]
+
+
+const filteredProudctNames = R.pipe(
+  R.filter(R.where({
+    category:R.equals('clothes'),
+    price:R.lt(R.__,300),
+    count:R.lt(R.__,40)
+  })),
+  R.map(x => x.name)
+)
+
+
+const truncate = R.when(
+  str => str.length > 10,
+  R.pipe(
+    R.take(10),
+    R.concat(R.__,'...')
+  )
+)
+
+
 log(
-  R.set(stateLens,'150 street' ,state)
+  filteredProudctNames(products)
+)
+
+log(
+  truncate('12345678910')
+)
+
+
+
+
+const state2 = [1,2,3,4,5]
+
+const pop = state2.filter((v,i,arr) => i !== arr.length -1)
+const newState = [...pop,6]
+
+log(
+  newState
+)
+
+const cuttedAr = R.init(state2);
+log(
+  R.append(6,cuttedAr)
+)
+
+
+const newReducer =  R.useWith(
+    R.append,
+    [
+      R.prop('payload'),
+      R.init
+    ]
+  )
+
+log('==========')
+log(
+  newReducer({payload:6},state2)
+)
+
+
+const state3 = {
+  loading:false,
+  west:true,
+  peopleJoined:['Sung','sw','ews','es','aaa']
+}
+
+const action2 = {payload:'dsafdasfadsdds'}
+
+log(
+  R.useWith(R.append, [R.prop('payload'),R.init])(action2,R.path(['peopleJoined'], state3))
+)
+
+const resultaa = R.useWith(Math.pow, [R.inc,R.dec])(2,3)
+
+log(
+  resultaa
+)
+
+
+const ar2 = [1,2,3,4,5];
+const str2 = 'abcd'
+
+log(
+  R.drop(2,ar2)
+)
+log(
+  R.dropLast(2,str2)
+)
+
+const students = [
+  {name:'Alex',score:84, isActive:true},
+  {name:'Jack',score:65, isActive:false},
+  {name:'John',score:46, isActive:true}
+]
+
+
+const byScore = R.groupBy(student => {
+    return student.score > 50 ? 'positive' : 'negative'
+})
+const byActivity = R.groupBy(student =>
+  student.isActive ? 'active' : 'not-active'
+)
+
+console.log('groups', byScore(students))
+console.log('groups', byActivity(students))
+
+
+
+
+const callit = async () => {
+  const w = await fetchCall('https://jsonplaceholder.typicode.com/todos')
+  return R.pipe(
+    R.map(todo => {
+      return {completed:todo.completed, title:todo.title}
+    }),
+    R.groupBy(todo => todo.completed ? 'complete' : 'incomplete')
+  )(w)
+}
+
+// log('==================')
+// callit()
+// .then(a => console.log(a))
+
+
+
+
+log('sooooorttttiiinnngg')
+
+
+const unsorted = [1,2,3,4,5];
+const ascend = R.ascend(R.identity);
+const descend = R.descend(R.identity);
+const asc = R.sort(descend)
+
+log(asc(unsorted))
+
+
+
+const usermans = [
+  {name:'John'},
+  {name:'alex'},
+  {name:"james"}
+]
+
+
+const sortFn = R.sortBy(R.pipe(R.prop('name'),R.toLower))
+
+
+log(
+  sortFn(usermans)
+)
+
+var alice = {
+  name: 'alice',
+  age: 40
+};
+var bob = {
+  name: 'bob',
+  age: 30
+};
+var clara = {
+  name: 'clara',
+  age: 40
+};
+var peoples = [clara, bob, alice];
+var ageNameSort = R.sortWith([
+  R.descend(R.prop('age')),
+  R.ascend(R.prop('name'))
+]);
+
+
+
+log(
+  ageNameSort(peoples)
+)
+
+
+
+const studentss = [
+  {name:'Alex',score:84, isActive:true},
+  {name:'Jack',score:65, isActive:false},
+  {name:'John',score:46, isActive:true}
+]
+
+
+const isActive = R.any(R.propEq('isActive',true))
+
+
+log(
+  isActive(studentss)
 )
